@@ -1,11 +1,16 @@
+import sys
+import os
+
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+if CURRENT_DIR not in sys.path:
+    sys.path.insert(0, CURRENT_DIR)
+
 try:
-    __import__("pysqlite3")
-    import sys
-    sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
-except ImportError:
+    import pysqlite3
+    sys.modules["sqlite3"] = pysqlite3
+except Exception:
     pass
 
-import os
 import threading
 import warnings
 
@@ -34,6 +39,8 @@ from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 from core.document_processor import DocumentProcessor
 from core.feedback_db import FeedbackDB
 from core.rag_pipeline import RAGPipeline
+
+load_dotenv()
 
 load_dotenv()
 
