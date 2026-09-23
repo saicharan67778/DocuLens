@@ -1,7 +1,10 @@
 import json
 import os
+import shutil
 import sqlite3
 from typing import Any, Dict, List, Optional, Tuple
+import chromadb
+from chromadb.config import Settings
 from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
@@ -18,12 +21,22 @@ class FeedbackDB:
         os.makedirs(self.vector_path, exist_ok=True)
 
         self.embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
+        self.client = self._create_client()
         self.query_store = Chroma(
+            client=self.client,
             collection_name="doculens_query_memory",
-            embedding_function=self.embeddings,
-            persist_directory=self.vector_path
+            embedding_function=self.embeddings
         )
         self._init_sqlite()
+
+    def _create_client(self):
+        settings = Settings(anonymized_telemetry=False, allow_reset=True)
+        try:
+            return chromadb.PersistentClient(path=self.vector_path, settings=settings)
+        except Exception:
+            if os.path.exists(self.vector_path):
+                shutil.rmtree(self.vector_path, ignore_errors=True)
+            return chromadb.PersistentClient(path=self.vector_path, settings=settings)
 
     def _get_connection(self):
         return sqlite3.connect(self.db_path)

@@ -1,5 +1,8 @@
 import os
+import shutil
 from typing import Any, Dict, List, Tuple
+import chromadb
+from chromadb.config import Settings
 from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 from langchain_community.retrievers import BM25Retriever
 from langchain_community.vectorstores import Chroma
@@ -91,26 +94,36 @@ class RAGPipeline:
             groq_api_key=groq_api_key,
             temperature=0.1
         )
+        self.client = self._create_client()
         self.vector_store = Chroma(
+            client=self.client,
             collection_name="doculens_knowledge_base",
-            embedding_function=self.embeddings,
-            persist_directory=self.persist_dir
+            embedding_function=self.embeddings
         )
         self.bm25_retriever = None
 
+    def _create_client(self):
+        settings = Settings(anonymized_telemetry=False, allow_reset=True)
+        try:
+            return chromadb.PersistentClient(path=self.persist_dir, settings=settings)
+        except Exception:
+            if os.path.exists(self.persist_dir):
+                shutil.rmtree(self.persist_dir, ignore_errors=True)
+            return chromadb.PersistentClient(path=self.persist_dir, settings=settings)
+
     def initialize_index(self, documents: List[Document], reset: bool = True):
-        if reset and os.path.exists(self.persist_dir):
+        if reset:
             try:
-                self.vector_store.delete_collection()
+                self.client.delete_collection("doculens_knowledge_base")
             except Exception:
                 pass
 
-        self.vector_store = Chroma.from_documents(
-            documents=documents,
-            embedding=self.embeddings,
+        self.vector_store = Chroma(
+            client=self.client,
             collection_name="doculens_knowledge_base",
-            persist_directory=self.persist_dir
+            embedding_function=self.embeddings
         )
+        self.vector_store.add_documents(documents)
         self.bm25_retriever = BM25Retriever.from_documents(documents)
 
     def _hybrid_retrieve(self, query: str, k: int = 6) -> List[Document]:
