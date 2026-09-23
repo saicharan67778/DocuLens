@@ -82,3 +82,86 @@ Ini, TOML
 GROQ_API_KEY = "gsk_your_actual_groq_api_key_here"
 
 6.Click Deploy.
+
+
+
+
+
+ARCHITECTURE DIAGRAM
+
+
+
+
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                                   CLIENT LAYER                                         │
+│                      Streamlit Glassmorphism UI (Port 8501)                            │
+│           [Interactive Q&A Session]       │     [Executive Report Generator]           │
+└───────────────────────────┬─────────────────────────────────────────▲──────────────────┘
+                            │                                         │
+┌───────────────────────────▼─────────────────────────────────────────┴──────────────────┐
+│                            ORCHESTRATION & INGESTION                                   │
+│  ┌───────────────────────────────┐        ┌─────────────────────────────────────────┐  │
+│  │     DocumentProcessor         │        │         Context Digest Engine           │  │
+│  │  - PyPDF Page Extraction      │        │  - 2-Sentence Corpus Summary            │  │
+│  │  - Recursive Chunk (800/150)  │        │  - Automated Exploratory Chips          │  │
+│  └───────────────┬───────────────┘        └─────────────────────────────────────────┘  │
+│                  │                                                                     │
+│                  ├───────────────────────────────────┐                                 │
+│                  ▼                                   ▼                                 │
+│     ┌────────────────────────┐          ┌────────────────────────┐                     │
+│     │  FastEmbed (ONNX CPU)  │          │   Rank-BM25 Tokenizer  │                     │
+│     │  bge-small-en-v1.5     │          │   In-Memory Inverted   │                     │
+│     │  Global Cached Session │          │   Keyword Index        │                     │
+│     └────────────┬───────────┘          └────────────┬───────────┘                     │
+└──────────────────┼───────────────────────────────────┼─────────────────────────────────┘
+                   │                                   │
+┌──────────────────▼───────────────────────────────────▼─────────────────────────────────┐
+│                              HYBRID STORAGE & RETRIEVAL                                │
+│  ┌───────────────────────────────────┐    ┌─────────────────────────────────────────┐  │
+│  │   ChromaDB Persistent Store       │    │          BM25 Sparse Retriever          │  │
+│  │   Collection:                     │    │          Exact Lexical Matching         │  │
+│  │   "queriom_knowledge_base"        │    │          (Terms, Codes, Acronyms)       │  │
+│  └─────────────────┬─────────────────┘    └────────────────────┬────────────────────┘  │
+│                    │                                           │                       │
+│                    └─────────────────────┬─────────────────────┘                       │
+│                                          ▼                                             │
+│                         ┌─────────────────────────────────┐                            │
+│                         │   Reciprocal Rank Fusion        │                            │
+│                         │   & Deduplication Layer         │                            │
+│                         └────────────────┬────────────────┘                            │
+│                                          │                                             │
+│                                          ▼                                             │
+│                         ┌─────────────────────────────────┐   Distance > 1.15          │
+│                         │   Distance Threshold Gate       ├────────────────────┐       │
+│                         │   (Geometric Cutoff <= 1.15)    │                    │       │
+│                         └────────────────┬────────────────┘                    │       │
+│                                          │ Verified Context                    │       │
+└──────────────────────────────────────────┼─────────────────────────────────────┼───────┘
+                                           │                                     │
+┌──────────────────────────────────────────▼─────────────────────────────────┐   │
+│                          SYNTHESIS & INFERENCE LAYER                       │   │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │   │
+│  │                   Groq LPU Acceleration Cluster                      │  │   │
+│  │   Models: openai/gpt-oss-20b | qwen/qwen3.8-27b | gpt-oss-120b       │  │   │
+│  │   Throughput: ~300+ Tokens/Sec | Temp: 0.1                           │  │   │
+│  └──────────────────────────────────▲───────────────────────────────────┘  │   │
+│                                     │                                          │
+│        Prompt Assembly: Grounding System Prompt + Citations                    │
+│                        + Few-Shot Memory Exemplars                             │
+└─────────────────────────────────────┼──────────────────────────────────────────┘
+                                      │ Output Generated                         │ Circuit Breaker
+┌─────────────────────────────────────▼──────────────────────────────────────────▼───────┐
+│                             CLOSED-LOOP RLHF SUBSYSTEM                                 │
+│  ┌──────────────────────────────────────────────────────────────────────────────────┐  │
+│  │ Telemetry Database (SQLite: data/interactions.db)                                │  │
+│  │ Logs: [query_id, timestamp, question, answer, confidence, sources, rating]       │  │
+│  └──────────────────────────┬───────────────────────────────────────┬───────────────┘  │
+│                             │ User Rating (Thumbs Down + Fix)       │ One-Click Export │
+│                             ▼                                       ▼                  │
+│  ┌─────────────────────────────────────────────────────┐  ┌─────────────────────────┐  │
+│  │ ChromaDB: "queriom_query_memory"                    │  │ data/dpo_feedback.jsonl │  │
+│  │ - Stores: Verified Q&A Exemplar Vectors             │  │ - Format:               │  │
+│  │ - Intercepts future queries (Cosine Distance <= 0.8)│  │   {prompt, chosen,      │  │
+│  │ - Injects approved answers as runtime context       │  │    rejected}            │  │
+│  └─────────────────────────────────────────────────────┘  └─────────────────────────┘  │
+└────────────────────────────────────────────────────────────────────────────────────────┘
