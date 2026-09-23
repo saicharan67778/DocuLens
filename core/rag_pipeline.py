@@ -95,11 +95,7 @@ class RAGPipeline:
             temperature=0.1
         )
         self.client = self._create_client()
-        self.vector_store = Chroma(
-            client=self.client,
-            collection_name="queriom_knowledge_base",
-            embedding_function=self.embeddings
-        )
+        self.vector_store = self._init_vector_store()
         self.bm25_retriever = None
 
     def _create_client(self):
@@ -111,23 +107,53 @@ class RAGPipeline:
                 shutil.rmtree(self.persist_dir, ignore_errors=True)
             return chromadb.PersistentClient(path=self.persist_dir, settings=settings)
 
-    def initialize_index(self, documents: List[Document], reset: bool = True):
-        if reset:
-            try:
-                self.client.delete_collection("queriom_knowledge_base")
-            except Exception:
-                pass
-
-        self.vector_store = Chroma(
+    def _init_vector_store(self):
+        return Chroma(
             client=self.client,
             collection_name="queriom_knowledge_base",
             embedding_function=self.embeddings
         )
-        self.vector_store.add_documents(documents)
+
+    def _ensure_vector_store(self):
+        try:
+            self.vector_store = self._init_vector_store()
+        except Exception:
+            self.client = self._create_client()
+            self.vector_store = self._init_vector_store()
+
+    def initialize_index(self, documents: List[Document], reset: bool = True):
+        if reset:
+            try:
+                existing = self.vector_store.get()
+                if existing and existing.get("ids"):
+                    self.vector_store.delete(ids=existing["ids"])
+            except Exception:
+                try:
+                    self.client.reset()
+                except Exception:
+                    if os.path.exists(self.persist_dir):
+                        shutil.rmtree(self.persist_dir, ignore_errors=True)
+                    self.client = self._create_client()
+                self._ensure_vector_store()
+
+        try:
+            self.vector_store.add_documents(documents)
+        except Exception:
+            self._ensure_vector_store()
+            self.vector_store.add_documents(documents)
+
         self.bm25_retriever = BM25Retriever.from_documents(documents)
 
     def _hybrid_retrieve(self, query: str, k: int = 6) -> List[Document]:
-        dense_docs = self.vector_store.similarity_search(query, k=k)
+        try:
+            dense_docs = self.vector_store.similarity_search(query, k=k)
+        except Exception:
+            self._ensure_vector_store()
+            try:
+                dense_docs = self.vector_store.similarity_search(query, k=k)
+            except Exception:
+                dense_docs = []
+
         sparse_docs = self.bm25_retriever.invoke(query) if self.bm25_retriever else []
 
         combined = []
@@ -147,7 +173,18 @@ class RAGPipeline:
         if not self.vector_store:
             return {"answer": "No indexed documents found.", "sources": [], "confidence": "None"}
 
-        matches: List[Tuple[Document, float]] = self.vector_store.similarity_search_with_score(question, k=1)
+        try:
+            matches: List[Tuple[Document, float]] = self.vector_store.similarity_search_with_score(question, k=1)
+        except Exception:
+            self._ensure_vector_store()
+            try:
+                matches = self.vector_store.similarity_search_with_score(question, k=1)
+            except Exception:
+                return {
+                    "answer": "I couldn't find information about that in the uploaded documents.",
+                    "sources": [],
+                    "confidence": "Low"
+                }
 
         if not matches or matches[0][1] > distance_threshold:
             return {

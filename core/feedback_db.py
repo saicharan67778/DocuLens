@@ -22,11 +22,7 @@ class FeedbackDB:
 
         self.embeddings = embeddings or FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
         self.client = self._create_client()
-        self.query_store = Chroma(
-            client=self.client,
-            collection_name="queriom_query_memory",
-            embedding_function=self.embeddings
-        )
+        self.query_store = self._init_query_store()
         self._init_sqlite()
 
     def _create_client(self):
@@ -37,6 +33,20 @@ class FeedbackDB:
             if os.path.exists(self.vector_path):
                 shutil.rmtree(self.vector_path, ignore_errors=True)
             return chromadb.PersistentClient(path=self.vector_path, settings=settings)
+
+    def _init_query_store(self):
+        return Chroma(
+            client=self.client,
+            collection_name="queriom_query_memory",
+            embedding_function=self.embeddings
+        )
+
+    def _ensure_query_store(self):
+        try:
+            self.query_store = self._init_query_store()
+        except Exception:
+            self.client = self._create_client()
+            self.query_store = self._init_query_store()
 
     def _get_connection(self):
         return sqlite3.connect(self.db_path)
@@ -93,12 +103,26 @@ class FeedbackDB:
                     "rating": rating
                 }
             )
-            self.query_store.add_documents([doc])
+            try:
+                self.query_store.add_documents([doc])
+            except Exception:
+                self._ensure_query_store()
+                try:
+                    self.query_store.add_documents([doc])
+                except Exception:
+                    pass
 
     def search_similar_queries(self, incoming_question: str, k: int = 3, threshold: float = 0.85) -> List[Dict[str, Any]]:
-        matches: List[Tuple[Document, float]] = (
-            self.query_store.similarity_search_with_score(incoming_question, k=k)
-        )
+        try:
+            matches: List[Tuple[Document, float]] = (
+                self.query_store.similarity_search_with_score(incoming_question, k=k)
+            )
+        except Exception:
+            self._ensure_query_store()
+            try:
+                matches = self.query_store.similarity_search_with_score(incoming_question, k=k)
+            except Exception:
+                return []
 
         similar_exemplars = []
         for doc, distance in matches:
