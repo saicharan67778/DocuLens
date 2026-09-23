@@ -8,6 +8,15 @@ except ImportError:
 import os
 os.environ["ANONYMIZED_TELEMETRY"] = "False"
 
+import warnings
+warnings.filterwarnings("ignore")
+
+try:
+    import chromadb.telemetry.posthog
+    chromadb.telemetry.posthog.Posthog.capture = lambda *args, **kwargs: None
+except Exception:
+    pass
+
 import streamlit as st
 from dotenv import load_dotenv
 from core.document_processor import DocumentProcessor
