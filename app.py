@@ -6,10 +6,21 @@ except ImportError:
     pass
 
 import os
-os.environ["ANONYMIZED_TELEMETRY"] = "False"
-
+import threading
 import warnings
+
+os.environ["ANONYMIZED_TELEMETRY"] = "False"
 warnings.filterwarnings("ignore")
+
+import tqdm
+if not hasattr(tqdm.tqdm, "_lock"):
+    tqdm.tqdm._lock = threading.RLock()
+
+try:
+    import chromadb.telemetry.product.posthog
+    chromadb.telemetry.product.posthog.Posthog.capture = lambda *args, **kwargs: None
+except Exception:
+    pass
 
 try:
     import chromadb.telemetry.posthog
@@ -26,13 +37,13 @@ from core.rag_pipeline import RAGPipeline
 load_dotenv()
 
 st.set_page_config(
-    page_title="DocuLens | Document Intelligence ",
+    page_title="Queriom | Document Intelligence & Reports",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-DOCULENS_CSS = """
+QUERIOM_CSS = """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
@@ -132,7 +143,7 @@ DOCULENS_CSS = """
     }
 </style>
 """
-st.markdown(DOCULENS_CSS, unsafe_allow_html=True)
+st.markdown(QUERIOM_CSS, unsafe_allow_html=True)
 
 if "feedback_db" not in st.session_state:
     st.session_state.feedback_db = FeedbackDB()
@@ -152,8 +163,8 @@ if "generated_report" not in st.session_state:
     st.session_state.generated_report = None
 
 with st.sidebar:
-    st.markdown("### ⚡ **DocuLens**")
-    st.caption("AI-Powered Document Intelligence")
+    st.markdown("### ⚡ **Queriom**")
+    st.caption("Groq Engine + Persistent Vector DB")
     st.markdown("---")
 
     groq_api_key = os.getenv("GROQ_API_KEY")
@@ -223,7 +234,7 @@ with st.sidebar:
 
 col_title, col_stat = st.columns([3, 1])
 with col_title:
-    st.markdown("# **DocuLens**")
+    st.markdown("# **Queriom**")
     st.caption("Grounded Document Intelligence & Multi-Section Report Generation.")
 
 with col_stat:
@@ -399,7 +410,7 @@ with tab_qa:
 
 with tab_report:
     st.markdown("### 📑 **Natural Language Executive Report Generator**")
-    st.caption("Provide a high-level instruction or objective. DocuLens will scan the persistent corpus and compile a formal, multi-section whitepaper report.")
+    st.caption("Provide a high-level instruction or objective. Queriom will scan the persistent corpus and compile a formal, multi-section whitepaper report.")
 
     col_r1, col_r2 = st.columns([3, 1])
     with col_r1:
@@ -445,7 +456,7 @@ with tab_report:
             st.download_button(
                 label="📥 Download Report (.md)",
                 data=rep["content"],
-                file_name="DocuLens_Executive_Report.md",
+                file_name="Queriom_Executive_Report.md",
                 mime="text/markdown",
                 use_container_width=True
             )

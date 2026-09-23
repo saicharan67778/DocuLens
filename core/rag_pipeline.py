@@ -11,7 +11,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_groq import ChatGroq
 
-GROUNDED_SYSTEM_PROMPT = """You are DocuLens, an intelligent document analysis assistant.
+GROUNDED_SYSTEM_PROMPT = """You are Queriom, an intelligent document analysis assistant.
 Answer the user's question accurately using ONLY the provided context snippets.
 
 GUIDELINES:
@@ -30,7 +30,7 @@ USER QUESTION:
 {question}
 """
 
-REPORT_SYNTHESIS_PROMPT = """You are DocuLens Executive Intelligence Engine. 
+REPORT_SYNTHESIS_PROMPT = """You are Queriom Executive Intelligence Engine. 
 Your objective is to generate an in-depth, professional, multi-section report based on the user's natural language request, relying EXCLUSIVELY on the provided document excerpts.
 
 USER INQUIRY / REPORT OBJECTIVE:
@@ -97,7 +97,7 @@ class RAGPipeline:
         self.client = self._create_client()
         self.vector_store = Chroma(
             client=self.client,
-            collection_name="doculens_knowledge_base",
+            collection_name="queriom_knowledge_base",
             embedding_function=self.embeddings
         )
         self.bm25_retriever = None
@@ -114,13 +114,13 @@ class RAGPipeline:
     def initialize_index(self, documents: List[Document], reset: bool = True):
         if reset:
             try:
-                self.client.delete_collection("doculens_knowledge_base")
+                self.client.delete_collection("queriom_knowledge_base")
             except Exception:
                 pass
 
         self.vector_store = Chroma(
             client=self.client,
-            collection_name="doculens_knowledge_base",
+            collection_name="queriom_knowledge_base",
             embedding_function=self.embeddings
         )
         self.vector_store.add_documents(documents)

@@ -24,7 +24,7 @@ class FeedbackDB:
         self.client = self._create_client()
         self.query_store = Chroma(
             client=self.client,
-            collection_name="doculens_query_memory",
+            collection_name="queriom_query_memory",
             embedding_function=self.embeddings
         )
         self._init_sqlite()
