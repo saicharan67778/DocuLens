@@ -1,6 +1,6 @@
-# ⚡ DocuLens | Document Intelligence & Executive Synthesis Engine
+# ⚡ Queriom | Document Intelligence & Executive Synthesis Engine
 
-DocuLens is a production-grade Retrieval-Augmented Generation (RAG) platform that converts unstructured documentation (PDF/TXT) into structured, grounded executive reports and real-time interactive intelligence. 
+Queriom is a production-grade Retrieval-Augmented Generation (RAG) platform that converts unstructured documentation (PDF/TXT) into structured, grounded executive reports and real-time interactive intelligence. 
 
 Powered by Groq's high-speed inference engine, ChromaDB vector storage, FastEmbed dense embeddings, BM25 sparse retrieval, and an integrated Human-in-the-Loop (RLHF) memory system.
 
@@ -35,8 +35,8 @@ Powered by Groq's high-speed inference engine, ChromaDB vector storage, FastEmbe
 
 ### 1. Clone the Repository
 ```bash
-git clone [https://github.com/](https://github.com/)<YOUR_GITHUB_USERNAME>/DocuLens.git
-cd DocuLens
+git clone [https://github.com/](https://github.com/)<YOUR_GITHUB_USERNAME>/Queriom.git
+cd Queriom
 
 ###2. Configure Virtual Environment (Python 3.11 Recommended)
 
