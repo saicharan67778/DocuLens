@@ -14,13 +14,13 @@ QUERY_VECTOR_PATH = "./data/query_chroma_db"
 
 
 class FeedbackDB:
-    def __init__(self, db_path: str = DB_PATH, vector_path: str = QUERY_VECTOR_PATH):
+    def __init__(self, embeddings: FastEmbedEmbeddings = None, db_path: str = DB_PATH, vector_path: str = QUERY_VECTOR_PATH):
         self.db_path = db_path
         self.vector_path = vector_path
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         os.makedirs(self.vector_path, exist_ok=True)
 
-        self.embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
+        self.embeddings = embeddings or FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
         self.client = self._create_client()
         self.query_store = Chroma(
             client=self.client,

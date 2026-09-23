@@ -30,6 +30,7 @@ except Exception:
 
 import streamlit as st
 from dotenv import load_dotenv
+from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 from core.document_processor import DocumentProcessor
 from core.feedback_db import FeedbackDB
 from core.rag_pipeline import RAGPipeline
@@ -42,6 +43,12 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+@st.cache_resource
+def get_shared_embeddings():
+    return FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
+
+shared_embeddings = get_shared_embeddings()
 
 QUERIOM_CSS = """
 <style>
@@ -146,7 +153,7 @@ QUERIOM_CSS = """
 st.markdown(QUERIOM_CSS, unsafe_allow_html=True)
 
 if "feedback_db" not in st.session_state:
-    st.session_state.feedback_db = FeedbackDB()
+    st.session_state.feedback_db = FeedbackDB(embeddings=shared_embeddings)
 if "rag_pipeline" not in st.session_state:
     st.session_state.rag_pipeline = None
 if "indexed_files" not in st.session_state:
@@ -205,7 +212,11 @@ with st.sidebar:
                         st.error(f"Error parsing {file.name}: {e}")
 
                 if all_chunks:
-                    pipeline = RAGPipeline(groq_api_key=groq_api_key, model_name=model_option)
+                    pipeline = RAGPipeline(
+                        groq_api_key=groq_api_key, 
+                        model_name=model_option,
+                        embeddings=shared_embeddings
+                    )
                     pipeline.initialize_index(all_chunks, reset=True)
                     digest = pipeline.generate_document_digest(all_chunks)
 

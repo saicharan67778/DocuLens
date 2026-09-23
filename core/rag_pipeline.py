@@ -86,9 +86,9 @@ EXCERPTS:
 
 
 class RAGPipeline:
-    def __init__(self, groq_api_key: str, model_name: str = "openai/gpt-oss-20b", persist_dir: str = "./data/chroma_db"):
+    def __init__(self, groq_api_key: str, model_name: str = "openai/gpt-oss-20b", embeddings: FastEmbedEmbeddings = None, persist_dir: str = "./data/chroma_db"):
         self.persist_dir = persist_dir
-        self.embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
+        self.embeddings = embeddings or FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
         self.llm = ChatGroq(
             model_name=model_name,
             groq_api_key=groq_api_key,
